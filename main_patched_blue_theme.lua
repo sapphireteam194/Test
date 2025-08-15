@@ -611,7 +611,7 @@ Background="#78350f",
 Button="#f59e0b",
 Icon="#fde68a",
 },
-Emerald={
+Blue={Name="Blue",Accent="#3b82f6",Outline="#dbeafe",Text="#dbeafe",Placeholder="#93c5fd",Background="#1e3a8a",Button="#3b82f6",Icon="#bfdbfe",},Emerald={
 Name="Emerald",
 Accent="#10b981",
 Outline="#d1fae5",
@@ -8848,99 +8848,3 @@ return aw
 end
 
 return aa
-
--- <<-- PATCH: Add Blue theme and rounded Blur image behavior -->>
-
--- Add a "Blue" theme (if themes table exists)
-pcall(function()
-    if i and i.Themes then
-        i.Themes.Blue = {
-            Name = "Blue",
-            Accent = "#039be5",
-            Outline = "#e1f5fe",
-            Text = "#ffffff",
-            Placeholder = "#b3e5fc",
-            Background = "#0b3d66",
-            Button = "#0288d1",
-            Icon = "#bbdefb",
-        }
-    end
-    if i and i.Colors then
-        i.Colors.Blue = "#039be5"
-    end
-end)
-
--- Replace any existing 'Blur' ImageLabel image with the provided id and make its border animate to rounded on open/close.
-pcall(function()
-    local TweenService = game:GetService("TweenService")
-    local TARGET_IMAGE = "rbxassetid://92153878448604"
-
-    local function setupBlur(blur)
-        if not blur or not blur:IsA("ImageLabel") then return end
-        -- Set image id
-        pcall(function() blur.Image = TARGET_IMAGE end)
-
-        -- Ensure UICorner exists
-        local corner = blur:FindFirstChildOfClass("UICorner")
-        if not corner then
-            corner = Instance.new("UICorner")
-            corner.CornerRadius = UDim.new(0,0)
-            corner.Name = "._rounded_corner"
-            corner.Parent = blur
-        end
-
-        -- Tween function to animate corner radius
-        local function animateRounded(isOpen)
-            local target = isOpen and UDim.new(0,24) or UDim.new(0,0) -- pixel radius when open vs closed
-            local success, err = pcall(function()
-                local tween = TweenService:Create(corner, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {CornerRadius = target})
-                tween:Play()
-            end)
-            if not success then
-                warn("[WindUI Patch] failed to tween corner: "..tostring(err))
-            end
-        end
-
-        -- Try to infer 'open' by observing Visibility or GroupTransparency changes on ancestors
-        -- Animate when blur.Visible changes
-        animateRounded(blur.Visible)
-        blur:GetPropertyChangedSignal("Visible"):Connect(function()
-            animateRounded(blur.Visible)
-        end)
-
-        -- Also observe descendant changes: if any ancestor's Visible toggles, propagate using a short debounce
-        local last = blur.Visible
-        local function checkAncestors()
-            local v = blur.Visible
-            if v ~= last then
-                last = v
-                animateRounded(v)
-            end
-        end
-
-        -- Connect to parent changed signals up the chain (best-effort)
-        local node = blur.Parent
-        while node do
-            pcall(function()
-                node:GetPropertyChangedSignal("Visible"):Connect(checkAncestors)
-            end)
-            node = node.Parent
-        end
-    end
-
-    -- Setup already existing Blur image(s)
-    for _, obj in ipairs(game:GetDescendants()) do
-        if obj.Name == "Blur" and obj:IsA("ImageLabel") then
-            pcall(setupBlur, obj)
-        end
-    end
-
-    -- Listen for future Blur ImageLabel creations
-    game.DescendantAdded:Connect(function(obj)
-        if obj and obj.Name == "Blur" and obj:IsA("ImageLabel") then
-            task.wait() -- allow properties to initialize
-            pcall(setupBlur, obj)
-        end
-    end)
-end)
--- <<-- END PATCH -->>
